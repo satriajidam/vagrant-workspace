@@ -1,0 +1,46 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Virtual Box configuration:
+GUI = false
+RAM = 1024
+
+# Network configuration:
+NETWORK = "10.10.10."
+NETMASK = "255.255.255.0"
+
+# Host configuration:
+BOX = "xcoo/xenial64"
+HOSTS = {
+	"cassandra-server" => [NETWORK+"20", GUI, RAM, BOX]
+}
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+	HOSTS.each do | (name, cfg) |
+		ipaddress, gui, ram, box = cfg
+		
+		config.ssh.insert_key = false
+		config.ssh.forward_agent = false
+		config.ssh.private_key_path = ["./keys/ubuntu_key", "~/.vagrant.d/insecure_private_key"]
+		
+		config.vm.define name do |machine|
+			machine.vm.box = box
+			machine.vm.box_check_update = true
+			machine.vm.hostname = name
+			machine.vm.provision "file", source: "./keys/ubuntu_key.pub", destination: "~/.ssh/authorized_keys"
+			machine.vm.provision "file", source: "./depedencies/jdk-8u121-linux-x64.tar.gz", destination: "/tmp/jdk-8u121-linux-x64.tar.gz"
+			machine.vm.provision "shell", path: "./provisions/shell-provision.sh"
+			machine.vm.network "private_network", ip: ipaddress, netmask: NETMASK
+			machine.vm.synced_folder "./", "/vagrant"
+			machine.vm.provider "virtualbox" do |vb|
+				vb.gui = gui
+				vb.memory = ram
+				vb.name = name
+			end
+		end
+	end			
+end

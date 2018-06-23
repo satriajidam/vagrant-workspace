@@ -1,2 +1,3 @@
 # vagrant-workspace
-My personal collection of Vagrant workspaces.
+
+Collection of Vagrant environments for my personal workspaces.

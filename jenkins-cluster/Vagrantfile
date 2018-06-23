@@ -1,0 +1,42 @@
+nodes = [
+  { :hostname => "jenkins-master",  :ip => "192.168.10.10", :ram => 2048, :box => "bento/ubuntu-16.04", :role => "master" }
+]
+
+Vagrant.configure("2") do |config|
+  nodes.each do |node|
+    config.vm.define node[:hostname] do |config|
+      config.vm.box = node[:box]
+      config.vm.box_check_update = true
+      config.vm.hostname = node[:hostname]
+      config.vm.network :private_network, ip: node[:ip], netmask: "255.255.255.0"
+      config.vm.network "forwarded_port", guest: 8080, host: 8080
+      config.vm.synced_folder "./", "/vagrant"
+      config.vm.provision "shell", path: "./host-setup.sh"
+
+      memory = node[:ram] ? node[:ram] : 512;
+      config.vm.provider :virtualbox do |vb|
+        vb.name = node[:hostname]
+        vb.customize [
+          "modifyvm", :id,
+          "--memory", memory.to_s,
+        ]
+
+        if node[:role] == "master"
+          config.vm.provision "shell", path: "./install-jenkins-master.sh"
+        end
+
+        if node[:role] == "slave"
+          config.vm.provision "shell", path: "./install-jenkins-slave.sh"
+        end
+
+        if node[:role] == "docker"
+          config.vm.provision "shell", path: "./install-docker-1.13.1.sh"
+          config.vm.provision "shell", inline: "usermod -aG docker vagrant"
+        end
+      end
+    end
+
+    config.hostmanager.enabled = true
+    config.hostmanager.manage_guest = true
+  end
+end

@@ -1,0 +1,36 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure("2") do |config|
+  config.ssh.insert_key = false
+  config.ssh.forward_agent = false
+  config.ssh.private_key_path = ["./keys/ubuntudev_key", "~/.vagrant.d/insecure_private_key"]
+
+  config.vm.define "ubuntudev" do |ubuntudev|
+    ubuntudev.vm.box = "ubuntu/trusty64"
+    ubuntudev.vm.box_check_update = true
+    ubuntudev.vm.hostname = "ubuntudev"
+    ubuntudev.vm.provision "file", source: "./keys/ubuntudev_key.pub", destination: "~/.ssh/authorized_keys"
+    # ubuntudev.vm.provision "docker"
+    ubuntudev.vm.provision "shell", path: "provisions/ubuntu-14.04-dev.sh"
+    # ubuntudev.vm.network "forwarded_port", guest: 80, host: 8080
+    ubuntudev.vm.network "private_network", ip: "172.17.8.100"
+    # ubuntudev.vm.network "public_network", ip: "172.17.8.100"
+    ubuntudev.vm.synced_folder "./", "/vagrant"
+  end
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.gui = false
+    vb.memory = 2048
+    vb.cpus = 2
+    vb.name = "ubuntudev"
+  end
+
+  # config.push.define "atlas" do |push|
+  #   push.app = "YOUR_ATLAS_USERNAME/YOUR_APPLICATION_NAME"
+  # end
+end

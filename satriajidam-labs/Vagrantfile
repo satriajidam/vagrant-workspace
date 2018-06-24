@@ -1,0 +1,49 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+# VM configuration
+BOX = "bento/ubuntu-16.04"
+GUI = false
+CPU = 1
+RAM = 1024
+
+# Network configuration
+NETWORK = "192.168.33."
+NETMASK = "255.255.255.0"
+
+# Hosts configuration
+HOSTS = {
+  "lab01" => [NETWORK+"101", GUI, CPU, RAM, BOX],
+  "lab02" => [NETWORK+"102", GUI, CPU, RAM, BOX]
+}
+
+# Vagrant configuration
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  HOSTS.each do | (name, cfg) |
+		ipaddress, gui, cpu, ram, box = cfg
+		
+		config.ssh.insert_key = false
+    config.ssh.forward_agent = false
+		config.ssh.private_key_path = ["./keys/ubuntu_key"]
+		
+		config.vm.define name do |machine|
+			machine.vm.box = box
+			machine.vm.box_check_update = true
+			machine.vm.hostname = name
+			machine.vm.provision "file", source: "./keys/ubuntu_key.pub", destination: "~/.ssh/authorized_keys"
+      machine.vm.provision "shell", path: "./provisions/host-setup.sh"
+      machine.vm.provision "shell", path: "./provisions/docker-install.sh"
+      machine.vm.provision "shell", path: "./provisions/docker-setup.sh"
+			machine.vm.network "private_network", ip: ipaddress, netmask: NETMASK
+			machine.vm.synced_folder "./", "/vagrant"
+			machine.vm.provider "virtualbox" do |vb|
+        vb.gui = gui
+        vb.cpus = cpu
+				vb.memory = ram
+				vb.name = name
+			end
+		end
+	end	
+end

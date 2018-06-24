@@ -1,0 +1,36 @@
+nodes = [
+  { :hostname => "chef-server",  :ip => "192.168.10.100", :ram => 1024, :box => "bento/ubuntu-16.04", :server => true },
+  { :hostname => "chef-node-01",  :ip => "192.168.10.101", :ram => 512, :box => "bento/ubuntu-16.04" },
+  { :hostname => "chef-node-02",  :ip => "192.168.10.102", :ram => 512, :box => "bento/ubuntu-16.04" }
+]
+
+Vagrant.configure("2") do |config|
+  nodes.each do |node|
+    config.vm.define node[:hostname] do |config|
+      config.vm.box = node[:box]
+      config.vm.box_check_update = true
+      config.vm.hostname = node[:hostname]
+      config.vm.network :private_network, ip: node[:ip], netmask: "255.255.255.0"
+      config.vm.synced_folder "./", "/vagrant"
+      config.vm.provision "shell", path: "./host-setup.sh"
+
+      memory = node[:ram] ? node[:ram] : 512;
+      config.vm.provider :virtualbox do |vb|
+        vb.name = node[:hostname]
+        vb.customize [
+          "modifyvm", :id,
+          "--memory", memory.to_s,
+        ]
+
+        if node[:server]
+          config.vm.provision "shell", path: "./install-chef-server.sh"
+        else
+          config.vm.provision "shell", path: "./install-chef-node.sh"
+        end
+      end
+    end
+
+    config.hostmanager.enabled = true
+    config.hostmanager.manage_guest = true
+  end
+end
